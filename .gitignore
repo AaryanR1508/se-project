@@ -1,0 +1,109 @@
+# Python Backend
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# Flask/FastAPI
+instance/
+.webassets-cache
+.pytest_cache/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE - VSCode
+.vscode/
+*.code-workspace
+
+# IDE - PyCharm
+.idea/
+*.iml
+*.iws
+out/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# ML Model files (if large)
+*.pkl
+*.h5
+*.pt
+*.pth
+
+# Data files (optional - uncomment if needed)
+# *.csv
+# *.json
+# data/
+
+# React + Vite Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Vite
+.vite/
+.cache/
+
+# npm/yarn
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Testing
+coverage/
+*.lcov
+.nyc_output
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
