@@ -1,0 +1,9 @@
+/* frontend/src/tailwind.css */
+@import "tailwindcss";
+
+/* small helpers for consistent styling (works with tailwind v4) */
+.card-border { border: 1px solid rgba(15,23,42,0.04); }
+.dark .card-border { border: 1px solid rgba(255,255,255,0.04); }
+.shadow-card { box-shadow: 0 12px 30px rgba(2,6,23,0.06); }
+.rounded-card { border-radius: 1rem; }
+.bg-accent { background-color: theme('colors.accent.DEFAULT', '#5b4ff6'); }
