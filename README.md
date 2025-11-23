@@ -16,7 +16,6 @@
 * **Interactive Dashboard**:
     * Dynamic charts visualizing historical and predicted data.
     * Search functionality for any valid stock ticker.
-    * Dark/Light mode support.
     * Historical data tables.
 
 ---
@@ -49,7 +48,12 @@
 * **Python** (v3.9+ recommended)
 * A free API key from [NewsAPI](httpswk://newsapi.org/)
 
-### 1. Backend Setup
+### 1. Clone the repository
+```bash
+git clone https://github.com/AaryanR1508/se-project.git
+cd se-project
+```
+### 2. Backend Setup
 
 Navigate to the backend directory:
 ```bash
@@ -89,7 +93,7 @@ python app.py
 
 *The backend will run on `http://localhost:5000`*
 
-### 2\. Frontend Setup
+### 3. Frontend Setup
 
 Open a new terminal and navigate to the frontend directory:
 
