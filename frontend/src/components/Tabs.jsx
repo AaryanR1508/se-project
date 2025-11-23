@@ -1,4 +1,3 @@
-// frontend/src/components/Tabs.jsx
 import React from 'react'
 
 export default function Tabs({ tabs = [], defaultTabId = null, onChange = () => {}, children }) {
@@ -15,10 +14,15 @@ export default function Tabs({ tabs = [], defaultTabId = null, onChange = () => 
           return (
             <button
               key={t.id}
+              id={`${t.id}-tab`}            // 👈 important: gives us #sentiment-tab, #price-tab, etc.
               role="tab"
               aria-selected={isActive}
               onClick={() => setActive(t.id)}
-              className={`px-3 py-2 rounded-md text-sm font-medium ${isActive ? 'bg-accent text-white shadow' : 'bg-white/90 text-gray-700 dark:bg-slate-800 dark:text-gray-300'}`}
+              className={`px-3 py-2 rounded-md text-sm font-medium ${
+                isActive
+                  ? 'bg-accent text-white shadow'
+                  : 'bg-white/90 text-gray-700 dark:bg-slate-800 dark:text-gray-300'
+              }`}
             >
               {t.label}
             </button>

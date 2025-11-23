@@ -78,7 +78,7 @@ export default function Dashboard() {
           <Tabs tabs={[
             { id: 'price', label: 'Price' },
             { id: 'sentiment', label: 'Sentiment' },
-            { id: 'risk', label: 'Risk' },
+            
             { id: 'history', label: 'History' },
           ]} defaultTabId="price">
             {(active) => (
@@ -110,6 +110,74 @@ export default function Dashboard() {
                       </div>
                     </Card>
 
+                    {active === 'price' && (
+  <div className="space-y-6">
+    {/* existing Price content: current price + chart + predictions */}
+    {/* ...your current stuff stays here... */}
+
+    {/* 👉 NEW: Risk section lives under Price now */}
+    <div className="mt-4">
+      <div className="bg-[#0F162A] rounded-xl shadow-card card-border p-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold text-gray-100">Risk assessment</h3>
+          <span className="text-xs text-gray-400">
+            Based on latest price volatility and sentiment.
+          </span>
+        </div>
+
+        <p className="text-xs mb-3 text-gray-400">
+          Note: risk is analysed using the <span className="font-semibold">latest sentiment</span>.{" "}
+          <button
+            type="button"
+            onClick={() => {
+              // programmatically switch to Sentiment tab by "clicking" it
+              document.getElementById("sentiment-tab")?.click();
+            }}
+            className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2"
+          >
+            View detailed sentiment →
+          </button>
+        </p>
+
+        {riskQ.isLoading ? (
+          <div className="text-sm text-gray-400">Loading risk scores…</div>
+        ) : riskQ.isError ? (
+          <div className="p-3 rounded-md bg-red-50 dark:bg-red-900/30 text-sm text-red-400">
+            Failed to load risk: {riskQ.error?.message ?? "Unknown error"}
+          </div>
+        ) : riskQ.data ? (
+          <div className="grid sm:grid-cols-3 gap-4 text-sm">
+            <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+              <div className="text-xs text-gray-400 mb-1">Risk level</div>
+              <div className="text-lg font-semibold text-gray-100">
+                {riskQ.data.risk_level ?? "—"}
+              </div>
+            </div>
+
+            <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+              <div className="text-xs text-gray-400 mb-1">Volatility</div>
+              <div className="text-lg font-semibold text-gray-100">
+                {riskQ.data.volatility != null
+                  ? `${riskQ.data.volatility.toFixed(2)}%`
+                  : "—"}
+              </div>
+            </div>
+
+            <div className="p-3 rounded-lg bg-white/5 border border-white/10 sm:col-span-1">
+              <div className="text-xs text-gray-400 mb-1">Recommendation</div>
+              <div className="text-sm font-medium text-gray-100">
+                {riskQ.data.recommendation ?? "—"}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-sm text-gray-400">No risk data available.</div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
+
                     {predQ.data && (
                       <Card title="Predictions">
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
@@ -133,11 +201,7 @@ export default function Dashboard() {
                   </Card>
                 )}
 
-                {active === 'risk' && (
-                  <Card title="Risk Assessment">
-                    {riskQ.isLoading ? <Skeleton className="h-40" /> : riskQ.isError ? <div className="p-3 rounded-md bg-red-50 dark:bg-red-900 text-red-800">Error: {riskQ.error?.message ?? 'Failed to fetch risk'}</div> : riskQ.data ? <RiskCard {...riskQ.data} /> : <div className="text-sm text-gray-500 dark:text-gray-400">No risk data.</div>}
-                  </Card>
-                )}
+
 
                 {active === 'history' && (
                     <div className="space-y-6">
