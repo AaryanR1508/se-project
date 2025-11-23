@@ -86,7 +86,7 @@ def predict():
             return jsonify({'error': 'Prediction failed'}), 500
         
         # Get historical chart data
-        chart_data = get_historical_for_chart(ticker, days=30)
+        chart_data = get_historical_for_chart(ticker, days=days)
         if chart_data is None:
             return jsonify({'error': 'Could not fetch historical chart data'}), 500
         

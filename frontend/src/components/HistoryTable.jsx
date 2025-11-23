@@ -15,13 +15,26 @@ export default function HistoryTable({ dates = [], prices = [] }) {
       </div>
 
       {/* table header */}
-      <div className="grid grid-cols-2 px-6 py-3 text-sm font-medium text-gray-400 border-b border-white/10">
+      <div className="grid grid-cols-2 px-6 py-3 text-sm font-medium text-gray-400 border-b border-white/10 bg-[#0F162A]">
         <div>Date</div>
         <div className="text-right">Price</div>
       </div>
 
-      {/* table body */}
-      <div className="max-h-[460px] overflow-auto">
+      {/* table body - Aesthetic Scroller Added Here */}
+      <div 
+        className="
+          max-h-[460px] 
+          overflow-y-auto 
+          
+          /* --- Aesthetic Scrollbar Styles --- */
+          [&::-webkit-scrollbar]:w-1.5
+          [&::-webkit-scrollbar-track]:bg-transparent
+          [&::-webkit-scrollbar-thumb]:bg-white/10
+          [&::-webkit-scrollbar-thumb]:rounded-full
+          hover:[&::-webkit-scrollbar-thumb]:bg-white/20
+          transition-colors
+        "
+      >
         {rows.map((r, idx) => (
           <div
             key={r.date + idx}

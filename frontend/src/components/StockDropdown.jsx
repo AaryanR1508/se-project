@@ -1,38 +1,34 @@
-// frontend/src/components/StockDropdown.jsx
 import React from "react";
 
 export default function StockDropdown({
-    onSearch = () => {},
+    onSearch = () => { },
     recent = [],
     popular = ["AAPL", "TSLA", "GOOGL", "MSFT", "AMZN"],
+    currentDays = 7,
+    onDaysChange = () => { },
 }) {
-    const [value, setValue] = React.useState(""); 
-    const [days, setDays] = React.useState(7);
+    const [value, setValue] = React.useState("");
 
     const popularTickers = React.useMemo(() => {
         return popular.slice(0, 5).map(t => t.toUpperCase());
     }, [popular]);
 
-    const inputRef = React.useRef(null); 
+    const inputRef = React.useRef(null);
 
     function submitSearch() {
         const t = (value || "").trim().toUpperCase();
         if (!t) return;
-        onSearch(t, days);
+        onSearch(t, currentDays);
     }
-    
+
     function selectPopular(t) {
         const up = t.toUpperCase();
         setValue(up);
-        onSearch(up, days);
+        onSearch(up, currentDays);
     }
 
     function changeDays(newDays) {
-        setDays(newDays);
-        const t = (value || "").trim().toUpperCase();
-        if (t) {
-            onSearch(t, newDays);
-        }
+        onDaysChange(newDays);
     }
 
     function onKeyDown(e) {
@@ -46,14 +42,14 @@ export default function StockDropdown({
         <div className="flex flex-col gap-2 w-full">
             {/* Main Search Bar (Input, Days Toggler, Search Button) */}
             <div className="flex items-center gap-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm px-3 py-1.5 border border-gray-100 dark:border-gray-700">
-                
+
                 <input
                     ref={inputRef}
                     value={value}
                     onChange={(e) => {
                         setValue(e.target.value.toUpperCase());
                     }}
-                    onKeyDown={onKeyDown} 
+                    onKeyDown={onKeyDown}
                     placeholder="Search ticker (e.g. AMZN)"
                     aria-label="Ticker search"
                     className="flex-1 bg-transparent outline-none text-sm px-1 py-2 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
@@ -61,16 +57,16 @@ export default function StockDropdown({
 
                 <div className="relative">
                     <button
-                        onClick={() => changeDays(days === 7 ? 14 : days === 14 ? 30 : 7)}
+                        onClick={() => changeDays(currentDays === 7 ? 14 : currentDays === 14 ? 30 : 7)}
                         className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-gray-50 dark:bg-slate-700 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition"
                         aria-label="Select days"
                     >
-                        <span>{days}d</span>
+                        <span>{currentDays}d</span>
                     </button>
                 </div>
-                
+
                 <button
-                    onClick={submitSearch} 
+                    onClick={submitSearch}
                     className="px-3 py-1.5 rounded-md bg-accent text-white text-sm hover:bg-blue-600 transition"
                     aria-label="Search"
                 >

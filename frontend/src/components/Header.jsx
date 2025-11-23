@@ -55,7 +55,7 @@ export default function Header({
                     animate={{ opacity: 1, transition: { delay: 0.5, duration: 0.4 } }}
                     style={{ textShadow: '0 0 5px rgba(167, 139, 250, 0.4)' }} // Subtle glow effect
                 >
-                    Stocks • Sentiment • Risk — powered by models
+                    Stocks • Sentiment • Risk — powered by AI
                 </motion.div>
             </div>
             {/* If you add a search bar here later, it will also be centered */}

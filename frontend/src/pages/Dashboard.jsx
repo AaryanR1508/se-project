@@ -13,12 +13,12 @@ import { fetchPrediction, fetchSentiment, fetchRisk } from "../api/client";
 import HistoryTable from "../components/HistoryTable";
 
 export default function Dashboard() {
-    const [ticker, setTicker] = React.useState("AAPL");
+    const [ticker, setTicker] = React.useState("");
     const [days, setDays] = React.useState(7);
     const [recent, setRecent] = React.useState(() => {
         try { return JSON.parse(localStorage.getItem("recent") || "[]") } catch { return [] }
     });
-    
+
     const [showHistorical, setShowHistorical] = React.useState(true);
     const [showPredicted, setShowPredicted] = React.useState(true);
 
@@ -46,7 +46,7 @@ export default function Dashboard() {
         if (!ticker) return;
         setRecent(prev => {
             const next = [ticker, ...prev.filter(x => x !== ticker)].slice(0, 12);
-            try { localStorage.setItem("recent", JSON.stringify(next)) } catch {}
+            try { localStorage.setItem("recent", JSON.stringify(next)) } catch { }
             return next;
         });
     }, [ticker]);
@@ -61,9 +61,18 @@ export default function Dashboard() {
         qc.prefetchQuery({ queryKey: ["sentiment", up], queryFn: () => fetchSentiment(up) });
         qc.prefetchQuery({ queryKey: ["risk", up, d], queryFn: () => fetchRisk(up, d) });
     }
-    
+
+    function handleDaysChange(newDays) {
+        setDays(newDays);
+        if (ticker) {
+            qc.invalidateQueries({ queryKey: ["predict"] });
+            qc.prefetchQuery({ queryKey: ["predict", ticker, newDays], queryFn: () => fetchPrediction(ticker, newDays) });
+            qc.prefetchQuery({ queryKey: ["risk", ticker, newDays], queryFn: () => fetchRisk(ticker, newDays) });
+        }
+    }
+
     const getChartColor = (type) => {
-        const isDark = true; 
+        const isDark = true;
         if (type === 'historical') {
             return isDark ? "#A78BFA" : "#4F46E5";
         }
@@ -72,12 +81,12 @@ export default function Dashboard() {
         }
         return "#CCC";
     };
-    
+
     const LegendButton = ({ label, type, isActive, onClick }) => (
         <button
             onClick={onClick}
             className={`flex items-center space-x-2 text-sm font-medium transition duration-150 ease-in-out
-                ${isActive 
+                ${isActive
                     ? 'text-white border-gray-500 bg-gray-700 shadow-inner'
                     : 'text-gray-300 border-gray-600 bg-gray-700/50 hover:bg-gray-700'
                 } 
@@ -85,7 +94,7 @@ export default function Dashboard() {
         >
             <span
                 className="w-3 h-3 rounded-full border-2"
-                style={{ 
+                style={{
                     backgroundColor: isActive ? getChartColor(type) : 'transparent',
                     borderColor: getChartColor(type),
                 }}
@@ -95,14 +104,14 @@ export default function Dashboard() {
     );
 
     const showUhOh = (
-        !ticker || 
+        ticker &&
         (predQ.isError && predQ.error?.message?.includes('404'))
     );
-    
+
     // Helper to calculate the range of historical data in days
     const calculatedHistoricalDays = React.useMemo(() => {
         const dates = predQ.data?.historical_dates;
-        
+
         if (!dates || dates.length < 2) {
             return null;
         }
@@ -115,10 +124,15 @@ export default function Dashboard() {
             const endDate = new Date(endDateStr);
 
             const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-            
-            // Convert milliseconds to days and add 1 (to include both the start and end day)
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
-            
+
+            // Convert milliseconds to days
+            let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            if (diffDays <= 14){
+                diffDays = diffDays + 3;
+            }else{
+                diffDays = diffDays + 2;
+            }
+
             return diffDays;
 
         } catch (e) {
@@ -127,26 +141,26 @@ export default function Dashboard() {
         }
 
     }, [predQ.data]);
-    
-    const historicalRangeMessage = 
-        calculatedHistoricalDays !== null && calculatedHistoricalDays > 0 ? 
-        `Showing the data of last ${calculatedHistoricalDays} days` : 
-        'No history range available.';
+
+    const historicalRangeMessage =
+        calculatedHistoricalDays !== null && calculatedHistoricalDays > 0 ?
+            `Showing the data of last ${calculatedHistoricalDays} days • The market is closed on Saturdays and Sundays.` :
+            'No history range available.';
 
     // Animation variants for the Body Content
     const bodyVariants = {
         hidden: { opacity: 0, y: 10 },
-        visible: { 
-            opacity: 1, 
-            y: 0, 
-            transition: { 
-                duration: 0.6, 
+        visible: {
+            opacity: 1,
+            y: 0,
+            transition: {
+                duration: 0.6,
                 ease: "easeOut",
                 delay: 0.3 // Delay slightly so the header loads first
-            } 
+            }
         }
     };
-    
+
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
             <div className="max-w-5xl mx-auto px-6 py-8">
@@ -162,14 +176,29 @@ export default function Dashboard() {
                         <div className="flex items-center justify-between gap-4 mb-3">
                             <div>
                                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Dashboard</h2>
-                                <div className="text-sm text-gray-500 dark:text-gray-400">Overview for {ticker}</div>
+                                <div className="text-sm text-gray-500 dark:text-gray-400">Overview for {ticker || "..."}</div>
                             </div>
                             <div className="w-[360px] hidden md:block">
-                                <StockDropdown onSearch={handleSearch} recent={recent} />
+                                <StockDropdown
+                                    onSearch={handleSearch}
+                                    recent={recent}
+                                    currentDays={days}
+                                    onDaysChange={handleDaysChange}
+                                />
                             </div>
                         </div>
 
-                        {showUhOh ? (
+                        {!ticker ? (
+                            <div className="flex flex-col items-center justify-center h-[50vh] bg-[#0F162A] rounded-xl shadow-lg border border-gray-700">
+                                <h3 className="text-3xl font-bold text-indigo-400 mb-4">Welcome! 🚀</h3>
+                                <p className="text-lg text-gray-300 mb-6">
+                                    Enter a stock ticker to get started.
+                                </p>
+                                <p className="text-md text-gray-400">
+                                    Use the search bar above to find predictions, sentiment, and risk analysis.
+                                </p>
+                            </div>
+                        ) : showUhOh ? (
                             <div className="flex flex-col items-center justify-center h-[50vh] bg-[#0F162A] rounded-xl shadow-lg border border-gray-700">
                                 <h3 className="text-3xl font-bold text-red-500 mb-4">Uh-Oh! 🚨</h3>
                                 <p className="text-lg text-gray-300 mb-6">
@@ -204,18 +233,18 @@ export default function Dashboard() {
                                                     <div className="mt-6">
                                                         {predQ.isLoading ? <Skeleton className="h-64" /> : predQ.data ? (
                                                             <div className="bg-white dark:bg-[#081427] rounded-xl p-4">
-                                                                
+
                                                                 <div className="flex space-x-6 justify-center mb-4">
-                                                                    <LegendButton 
-                                                                        label="Historical Price" 
-                                                                        type="historical" 
-                                                                        isActive={showHistorical} 
+                                                                    <LegendButton
+                                                                        label="Historical Price"
+                                                                        type="historical"
+                                                                        isActive={showHistorical}
                                                                         onClick={() => setShowHistorical(s => !s)}
                                                                     />
-                                                                    <LegendButton 
-                                                                        label="Predicted Price" 
-                                                                        type="predicted" 
-                                                                        isActive={showPredicted} 
+                                                                    <LegendButton
+                                                                        label="Predicted Price"
+                                                                        type="predicted"
+                                                                        isActive={showPredicted}
                                                                         onClick={() => setShowPredicted(s => !s)}
                                                                     />
                                                                 </div>
@@ -234,7 +263,7 @@ export default function Dashboard() {
                                                         ) : <div className="text-sm text-gray-500 dark:text-gray-400">No price data available.</div>}
                                                     </div>
                                                 </Card>
-                                                
+
                                                 {/* Integrated Risk Section */}
                                                 <div className="space-y-6">
                                                     <div className="mt-4">
@@ -296,7 +325,7 @@ export default function Dashboard() {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                
+
                                                 {/* Predictions Card */}
                                                 {predQ.data && (
                                                     <Card title="Predictions">
@@ -325,15 +354,18 @@ export default function Dashboard() {
 
                                         {active === 'history' && (
                                             <div className="space-y-6">
-                                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Historical Data</h3>
+                                                <div className="flex items-center justify-between">
+                                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Historical Data</h3>
+                                                    
+                                                </div>
                                                 <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                                                     {historicalRangeMessage}
                                                 </div>
-                                                
+
                                                 <HistoryTable
                                                     dates={predQ.data?.historical_dates || []}
                                                     prices={predQ.data?.historical_prices || []}
-                                                    maxHeight="max-h-200" 
+                                                    maxHeight="max-h-200"
                                                 />
                                             </div>
                                         )}

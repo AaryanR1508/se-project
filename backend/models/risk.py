@@ -1,18 +1,13 @@
 # models/risk.py
 """
-Risk module.
+Risk module with enhanced accuracy for stock risk assessment.
 
 Provides:
 - compute_daily_returns(prices: List[float]) -> List[float]
-- compute_volatility(prices: List[float]) -> float  # std of daily returns
+- compute_volatility(prices: List[float]) -> float
 - risk_level_from_volatility(vol: float) -> "Low"|"Medium"|"High"
-- recommend_action(volatility, overall_sentiment_score, short_term_trend) -> "Buy"|"Hold"|"Sell"
-- assemble_risk_report(historical_prices: List[float], overall_sentiment_score: float) -> dict
-
-Notes:
-- historical_prices should be ordered oldest -> newest (e.g., 30-day history)
-- overall_sentiment_score: from sentiment.overall["score"] (0..1 where >0.5 positive)
-- short_term_trend is computed as slope over last N days (simple linear fit)
+- recommend_action(...) -> "Buy"|"Hold"|"Sell"
+- assemble_risk_report(...) -> dict
 """
 
 from __future__ import annotations
@@ -42,7 +37,6 @@ def compute_daily_returns(prices: List[float]) -> List[float]:
 def compute_volatility(prices: List[float]) -> float:
     """
     Compute volatility as the standard deviation of daily returns.
-    Returns a positive float (e.g., 0.015 -> 1.5% daily stdev).
     """
     if len(prices) < 2:
         return 0.0
@@ -55,14 +49,19 @@ def compute_volatility(prices: List[float]) -> float:
     return vol
 
 
-def risk_level_from_volatility(vol: float, low_threshold: float = 0.01, high_threshold: float = 0.025) -> str:
+def risk_level_from_volatility(vol: float, low_threshold: float = 0.012, high_threshold: float = 0.030) -> str:
     """
-    Map volatility to risk level:
-    - vol < low_threshold -> Low
-    - low_threshold <= vol < high_threshold -> Medium
-    - vol >= high_threshold -> High
-
-    Thresholds are daily volatility. Tune as needed.
+    Map volatility to risk level with calibrated thresholds.
+    
+    Thresholds based on typical stock market volatility:
+    - Low: < 1.2% daily volatility (stable stocks)
+    - Medium: 1.2% - 3.0% daily volatility (normal market)
+    - High: > 3.0% daily volatility (volatile/risky stocks)
+    
+    For context:
+    - S&P 500 average: ~1.0-1.5%
+    - Individual stocks: ~1.5-2.5%
+    - Volatile stocks: >3.0%
     """
     if vol < low_threshold:
         return "Low"
@@ -74,85 +73,102 @@ def risk_level_from_volatility(vol: float, low_threshold: float = 0.01, high_thr
 def compute_short_term_trend(prices: List[float], days: int = 5) -> float:
     """
     Compute a simple short-term trend (slope) over the last `days` days.
-    Returns slope normalized by price (approx percentage).
-    If insufficient data, returns 0.0.
-
-    Implementation: linear regression slope on (x, price) for last `days` points.
+    Returns slope normalized by price.
     """
     n = min(days, len(prices))
     if n < 2:
         return 0.0
     y = np.array(prices[-n:], dtype=float)
     x = np.arange(n, dtype=float)
-    # slope via least squares: slope = cov(x,y)/var(x)
+    
     x_mean = x.mean()
     y_mean = y.mean()
     denom = ((x - x_mean) ** 2).sum()
+    
     if denom == 0:
         return 0.0
+        
     slope = ((x - x_mean) * (y - y_mean)).sum() / denom
+    
     # normalize slope by mean price to get relative change per day
     rel_slope = float(slope / (y_mean if y_mean != 0 else 1.0))
     return rel_slope
 
 
-def recommend_action(volatility: float, overall_sentiment_score: float, short_term_trend: float) -> str:
+def recommend_action(volatility: float, overall_sentiment_score: float | None, short_term_trend: float) -> str:
     """
-    Decision logic (simple heuristic):
-    - sentiment_score in [0,1], where >0.55 is positive, <0.45 negative, else neutral
-    - trend positive when short_term_trend > 0.001 (~0.1% per day)
-    - volatility penalizes buys when High
-
-    Returns "Buy", "Hold" or "Sell".
+    Enhanced decision logic with weighted scoring system.
+    
+    Combines sentiment, trend, and volatility for actionable recommendations.
+    Calibrated to avoid excessive "Hold" recommendations.
     """
-    # sentiment
-    if overall_sentiment_score is None:
-        sentiment = "neutral"
-    elif overall_sentiment_score > 0.55:
-        sentiment = "positive"
-    elif overall_sentiment_score < 0.45:
-        sentiment = "negative"
-    else:
-        sentiment = "neutral"
+    score = 0
+    
+    # --- 1. Sentiment Scoring (Weight: High) ---
+    sent = overall_sentiment_score if overall_sentiment_score is not None else 0.5
+    
+    if sent > 0.70:       # Very Positive
+        score += 3
+    elif sent > 0.55:     # Positive
+        score += 2
+    elif sent > 0.52:     # Mildly Positive
+        score += 1
+    elif sent < 0.30:     # Very Negative
+        score -= 3
+    elif sent < 0.45:     # Negative
+        score -= 2
+    elif sent < 0.48:     # Mildly Negative
+        score -= 1
+    # else: Neutral (0)
 
-    # trend
-    trend_pos = short_term_trend > 0.001
-    trend_neg = short_term_trend < -0.001
+    # --- 2. Trend Scoring (Weight: High) ---
+    # 0.001 = 0.1% daily change, 0.003 = 0.3% daily change
+    if short_term_trend > 0.005:      # Strong Uptrend (>0.5% daily)
+        score += 3
+    elif short_term_trend > 0.002:    # Uptrend (>0.2% daily)
+        score += 2
+    elif short_term_trend > 0.0005:   # Mild Uptrend
+        score += 1
+    elif short_term_trend < -0.005:   # Strong Downtrend
+        score -= 3
+    elif short_term_trend < -0.002:   # Downtrend
+        score -= 2
+    elif short_term_trend < -0.0005:  # Mild Downtrend
+        score -= 1
 
-    # volatility risk
+    # --- 3. Volatility/Risk Adjustment (Weight: Medium) ---
     risk = risk_level_from_volatility(volatility)
+    
+    if risk == "High":
+        # High volatility increases risk - penalize buying
+        if score > 0:
+            score -= 2
+        else:
+            score -= 1
+    elif risk == "Low":
+        # Low volatility is favorable - slight boost
+        if score > 0:
+            score += 1
 
-    # heuristics
-    if sentiment == "positive" and trend_pos and risk != "High":
+    # --- 4. Final Decision with Calibrated Thresholds ---
+    if score >= 2:
         return "Buy"
-    if sentiment == "negative" and trend_neg:
+    elif score <= -2:
         return "Sell"
-    # if volatility high and sentiment neutral, prefer Hold
-    if risk == "High" and sentiment == "neutral":
+    else:
         return "Hold"
-    # if sentiment positive but volatility high -> Hold
-    if sentiment == "positive" and risk == "High":
-        return "Hold"
-    # default
-    return "Hold"
 
 
 def assemble_risk_report(historical_prices: List[float], overall_sentiment_score: float | None) -> Dict[str, Any]:
     """
-    Produce a risk report dictionary:
-    {
-        "volatility": 0.0123,
-        "risk_level": "Medium",
-        "short_term_trend": 0.0012,
-        "recommendation": "Buy"
-    }
+    Produce a comprehensive risk report dictionary.
     """
     if not historical_prices:
         return {
             "volatility": None,
             "risk_level": None,
             "short_term_trend": None,
-            "recommendation": None,
+            "recommendation": "Hold",
             "note": "No historical prices provided",
         }
 
@@ -162,7 +178,7 @@ def assemble_risk_report(historical_prices: List[float], overall_sentiment_score
     rec = recommend_action(vol, overall_sentiment_score, trend)
 
     return {
-        "volatility": round(vol, 6),
+        "volatility": round(vol * 100, 2),  # Convert to percentage for display
         "risk_level": level,
         "short_term_trend": round(trend, 6),
         "recommendation": rec,
